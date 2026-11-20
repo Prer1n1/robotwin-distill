@@ -144,6 +144,9 @@ def main():
     ap.add_argument("--tasks", default=None, help="comma-separated subset of the frozen tasks (default: all)")
     ap.add_argument("--max-seeds-per-task", type=int, default=None, help="dev runs: only the first N seeds per task")
     ap.add_argument("--no-video", action="store_true", help="skip per-episode head-camera mp4s")
+    ap.add_argument("--skip-scenes", default=None,
+                    help="comma-separated task:seed pairs to leave out of the plan (e.g. place_mouse_pad:100008); "
+                         "use only for scenes that hang the simulator, and report the exclusion")
     ap.add_argument("--abort-on-error", action="store_true",
                     help="stop the run at the first episode that raises (smoke runs before a full run)")
     ap.add_argument("--no-prompt-cache", action="store_true",
@@ -207,6 +210,9 @@ def main():
                 raise ValueError(f"tasks not in frozen list: {missing}")
             tasks = want
         plan = {t: frozen["tasks"][t]["accepted_seeds"][: wrapper.max_seeds_per_task] for t in tasks}
+        if wrapper.skip_scenes:
+            skip = {(x.split(":")[0].strip(), int(x.split(":")[1])) for x in wrapper.skip_scenes.split(",") if x.strip()}
+            plan = {t: [sd for sd in v if (t, sd) not in skip] for t, v in plan.items()}
         n_total = sum(len(v) for v in plan.values())
 
         # Per-task step limit. RoboTwin's own evaluator stops an episode after
